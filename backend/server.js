@@ -31,10 +31,12 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Database Connection & Server Start
+// Server Start
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Database Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/qatest')
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => console.error('MongoDB connection error:', err));
