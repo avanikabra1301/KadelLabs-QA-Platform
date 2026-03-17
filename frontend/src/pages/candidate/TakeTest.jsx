@@ -12,8 +12,10 @@ const TakeTest = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [answers, setAnswers] = useState({}); // { questionId: [selectedOptions] }
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const timerRef = useRef(null);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     fetchTestDetails();
@@ -103,23 +105,32 @@ const TakeTest = () => {
   };
 
   const handleAutoSubmit = async () => {
-    if (!submission) return;
+    if (!submission || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     try {
       await api.post(`/submissions/${submission._id}/submit`, { isAutoSubmit: true });
       alert("Time is up! Test submitted automatically.");
       navigate(`/candidate/results/${submission._id}`);
     } catch (err) {
       console.error(err);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
   const submitTestManual = async () => {
+    if (isSubmittingRef.current) return;
     if (window.confirm("Are you sure you want to submit your test?")) {
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
       try {
         await api.post(`/submissions/${submission._id}/submit`, { isAutoSubmit: false });
         navigate(`/candidate/results/${submission._id}`);
       } catch (err) {
         alert('Failed to submit: ' + (err.response?.data?.message || err.message));
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     }
   };
@@ -160,6 +171,7 @@ const TakeTest = () => {
 
   if (questions.length === 0 || !test) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Loading Test...</div>;
 
+  // The actual number of questions the candidate sees is questions.length (since we slice in backend).
   const currentQ = questions[currentQuestionIndex];
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
 
@@ -171,17 +183,28 @@ const TakeTest = () => {
           fontSize: '1.25rem', 
           fontWeight: 'bold', 
           color: timeLeft < 60 ? 'var(--danger)' : 'var(--primary)',
-          backgroundColor: 'var(--surface-color)',
+          backgroundColor: timeLeft < 60 ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
           padding: '0.5rem 1rem',
           borderRadius: '0.5rem',
-          border: '1px solid var(--border-color)'
+          border: `1px solid ${timeLeft < 60 ? 'var(--danger)' : 'var(--border-color)'}`,
+          transition: 'all 0.3s ease',
+          animation: timeLeft < 60 && timeLeft > 0 ? 'pulse 1s infinite' : 'none'
         }}>
           ⏱ {formatTime(timeLeft)}
         </div>
       </div>
 
-      <div style={{ height: '6px', backgroundColor: 'var(--surface-color)', borderRadius: '3px', marginBottom: '2rem', overflow: 'hidden' }}>
-        <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.3s ease' }}></div>
+      {/* Adding a global keyframes style specifically for the dangerous timer pulse if it doesn't exist */}
+      <style>{`
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+
+      <div style={{ height: '4px', backgroundColor: 'var(--surface-color)', borderRadius: '2px', marginBottom: '2rem', overflow: 'hidden' }}>
+        <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
       </div>
 
       <div className="card" style={{ minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
@@ -196,22 +219,43 @@ const TakeTest = () => {
                 <label key={idx} style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: '0.75rem', 
-                  padding: '1rem', 
-                  backgroundColor: checked ? 'rgba(79, 70, 229, 0.1)' : 'var(--bg-color)', 
-                  border: `1px solid ${checked ? 'var(--primary)' : 'var(--border-color)'}`,
-                  borderRadius: '0.5rem',
+                  gap: '1rem', 
+                  padding: '1.25rem', 
+                  backgroundColor: checked ? 'rgba(79, 70, 229, 0.1)' : 'var(--surface-color)', 
+                  border: `2px solid ${checked ? 'var(--primary)' : 'var(--border-color)'}`,
+                  borderRadius: '0.75rem',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}>
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: checked ? 'scale(1.01)' : 'scale(1)',
+                  boxShadow: checked ? '0 4px 6px -1px rgba(79, 70, 229, 0.1)' : 'none',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (!checked) e.currentTarget.style.borderColor = 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!checked) e.currentTarget.style.borderColor = 'var(--border-color)';
+                  e.currentTarget.style.transform = checked ? 'scale(1.01)' : 'scale(1)';
+                }}
+                >
                   <input 
                     type={currentQ.type === 'mcq' ? 'radio' : 'checkbox'} 
                     name={`q-${currentQ._id}`}
                     value={opt}
                     checked={checked}
                     onChange={(e) => handleOptionChange(currentQ._id, opt, currentQ.type, e.target.checked)}
+                    style={{ 
+                      width: '1.5rem', 
+                      height: '1.5rem', 
+                      margin: 0, 
+                      cursor: 'pointer', 
+                      accentColor: 'var(--primary)',
+                      flexShrink: 0
+                    }}
                   />
-                  {opt}
+                  <span style={{ fontSize: '1.05rem', lineHeight: '1.5', fontWeight: checked ? '500' : '400' }}>{opt}</span>
                 </label>
               );
             }) : (
@@ -229,16 +273,31 @@ const TakeTest = () => {
         <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
           <button 
             className="btn btn-secondary" 
-            disabled={currentQuestionIndex === 0}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
             onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+            style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
           >
-            Previous
+            ← Previous
           </button>
           
           {currentQuestionIndex === questions.length - 1 ? (
-             <button className="btn" style={{ backgroundColor: 'var(--success)' }} onClick={submitTestManual}>Submit Final Test</button>
+             <button 
+                className="btn" 
+                style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
+                onClick={submitTestManual}
+                disabled={isSubmitting}
+              >
+               {isSubmitting ? 'Submitting...' : 'Submit Final Test'}
+             </button>
           ) : (
-            <button className="btn" onClick={() => setCurrentQuestionIndex(prev => prev + 1)}>Next</button>
+            <button 
+              className="btn" 
+              disabled={isSubmitting}
+              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+              style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
+            >
+              Next →
+            </button>
           )}
         </div>
       </div>

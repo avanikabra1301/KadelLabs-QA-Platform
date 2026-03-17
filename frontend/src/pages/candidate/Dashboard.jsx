@@ -52,7 +52,10 @@ const CandidateDashboard = () => {
               <h3 style={{ margin: '0 0 0.5rem 0' }}>{test.title}</h3>
               <p style={{ color: 'var(--text-muted)', flex: 1 }}>{test.description}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>{test.duration} mins</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                  {test.duration} mins
+                  {test.randomQuestionsCount > 0 ? ` • ${test.randomQuestionsCount} Qs` : ''}
+                </span>
                 
                 {isCompleted ? (
                   <Link to={`/candidate/results/${submission._id}`} className="btn btn-secondary">View Results</Link>

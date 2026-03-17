@@ -10,6 +10,7 @@ const answerSchema = new mongoose.Schema({
 const submissionSchema = new mongoose.Schema({
   testId: { type: mongoose.Schema.Types.ObjectId, ref: 'Test', required: true },
   candidateId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  assignedQuestions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }], // Randomly chosen questions for this candidate
   answers: [answerSchema],
   score: { type: Number, default: 0 },
   maxScore: { type: Number, default: 0 },

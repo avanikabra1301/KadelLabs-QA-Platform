@@ -7,6 +7,7 @@ const ManageQuestions = () => {
   const navigate = useNavigate();
   const [test, setTest] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [randomCount, setRandomCount] = useState(0);
   
   // Form state
   const [text, setText] = useState('');
@@ -27,6 +28,7 @@ const ManageQuestions = () => {
         api.get(`/questions/test/${id}`)
       ]);
       setTest(testData);
+      setRandomCount(testData.randomQuestionsCount || 0);
       setQuestions(qData);
     } catch (err) {
       console.error(err);
@@ -87,11 +89,20 @@ const ManageQuestions = () => {
 
   const publishTest = async () => {
     try {
-      await api.put(`/tests/${id}`, { status: 'published' });
+      await api.put(`/tests/${id}`, { status: 'published', randomQuestionsCount: randomCount });
       alert('Test published successfully!');
       navigate('/admin');
     } catch (err) {
       alert('Failed to publish');
+    }
+  };
+
+  const handleUpdateRandomCount = async () => {
+    try {
+      await api.put(`/tests/${id}`, { randomQuestionsCount: randomCount });
+      alert('Random questions count updated');
+    } catch (err) {
+      alert('Failed to update count');
     }
   };
 
@@ -109,6 +120,22 @@ const ManageQuestions = () => {
           </div>
           <p style={{ color: 'var(--text-muted)' }}>{test.description}</p>
           
+          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--bg-color)', borderRadius: '0.5rem', border: '1px solid var(--border-color)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Random Questions Count (0 for all)</label>
+              <input 
+                type="number" 
+                min="0" 
+                value={randomCount} 
+                onChange={(e) => setRandomCount(Number(e.target.value))} 
+                style={{ margin: '0.25rem 0 0', padding: '0.5rem' }}
+              />
+            </div>
+            {test.status !== 'published' && (
+              <button className="btn btn-secondary" onClick={handleUpdateRandomCount} style={{ alignSelf: 'flex-end', padding: '0.6rem 1rem' }}>Update</button>
+            )}
+          </div>
+
           <h3 style={{ marginTop: '2rem' }}>Questions added ({questions.length})</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
             {questions.map((q, idx) => (

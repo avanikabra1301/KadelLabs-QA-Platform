@@ -9,13 +9,26 @@ const startSubmission = async (req, res) => {
   try {
     const { testId } = req.body;
     
-    // Check if already started
     let submission = await Submission.findOne({ testId, candidateId: req.user._id });
     if (!submission) {
+      // Fetch test to see if random questions are enabled
+      const test = await Test.findById(testId);
+      if (!test) return res.status(404).json({ message: 'Test not found' });
+
+      // If randomQuestionsCount > 0, pick random questions
+      let assignedQuestions = [];
+      if (test.randomQuestionsCount > 0) {
+        const questions = await Question.find({ testId });
+        // Shuffle questions
+        const shuffled = questions.sort(() => 0.5 - Math.random());
+        assignedQuestions = shuffled.slice(0, test.randomQuestionsCount).map(q => q._id);
+      } // Else, we leave it empty and assume all questions belong to the test
+
       submission = await Submission.create({
         testId,
         candidateId: req.user._id,
-        startTime: new Date()
+        startTime: new Date(),
+        assignedQuestions
       });
     }
     
@@ -72,7 +85,13 @@ const submitTest = async (req, res) => {
       return res.status(400).json({ message: 'Test already completed' });
     }
 
-    const questions = await Question.find({ testId: submission.testId._id });
+    let questions;
+    if (submission.assignedQuestions && submission.assignedQuestions.length > 0) {
+      questions = await Question.find({ _id: { $in: submission.assignedQuestions } });
+    } else {
+      questions = await Question.find({ testId: submission.testId._id });
+    }
+    
     let totalScore = 0;
     let maxScore = 0;
 

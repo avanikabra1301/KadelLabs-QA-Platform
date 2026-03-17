@@ -25,7 +25,18 @@ const createQuestion = async (req, res) => {
 // @access  Private
 const getQuestionsByTest = async (req, res) => {
   try {
-    const questions = await Question.find({ testId: req.params.testId });
+    let query = { testId: req.params.testId };
+    
+    // If Candidate, try to find their submission to respect assigned random questions
+    if (req.user.role !== 'admin') {
+      const Submission = require('../models/Submission');
+      const submission = await Submission.findOne({ testId: req.params.testId, candidateId: req.user._id });
+      if (submission && submission.assignedQuestions && submission.assignedQuestions.length > 0) {
+        query = { _id: { $in: submission.assignedQuestions } };
+      }
+    }
+
+    const questions = await Question.find(query);
     // If not admin, hide correctAnswers
     if (req.user.role !== 'admin') {
       const sanitizedQuestions = questions.map(q => {

@@ -6,11 +6,12 @@ const Question = require('../models/Question');
 // @access  Private/Admin
 const createTest = async (req, res) => {
   try {
-    const { title, description, duration } = req.body;
+    const { title, description, duration, randomQuestionsCount } = req.body;
     const test = await Test.create({
       title,
       description,
       duration,
+      randomQuestionsCount: randomQuestionsCount || 0,
       createdBy: req.user._id
     });
     res.status(201).json(test);
@@ -53,7 +54,7 @@ const getTestById = async (req, res) => {
 // @access  Private/Admin
 const updateTest = async (req, res) => {
   try {
-    const { title, description, duration, status } = req.body;
+    const { title, description, duration, status, randomQuestionsCount } = req.body;
     const test = await Test.findById(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     
@@ -61,6 +62,9 @@ const updateTest = async (req, res) => {
     test.description = description || test.description;
     test.duration = duration || test.duration;
     test.status = status || test.status;
+    if (randomQuestionsCount !== undefined) {
+      test.randomQuestionsCount = randomQuestionsCount;
+    }
     
     const updatedTest = await test.save();
     res.json(updatedTest);
