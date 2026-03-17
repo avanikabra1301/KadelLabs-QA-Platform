@@ -16,6 +16,8 @@ const TakeTest = () => {
 
   const timerRef = useRef(null);
   const isSubmittingRef = useRef(false);
+  const submissionRef = useRef(null);
+  const violationCountsRef = useRef({ tabSwitches: 0, copyPaste: 0 });
 
   useEffect(() => {
     fetchTestDetails();
@@ -27,23 +29,40 @@ const TakeTest = () => {
     // Anti-cheat: disable copy-paste
     const handleCopyPaste = async (e) => {
       e.preventDefault();
-      alert("Copy/Paste is disabled during the test.");
+      violationCountsRef.current.copyPaste += 1;
+      const count = violationCountsRef.current.copyPaste;
+      
       try {
         await api.put(`/submissions/${submission._id}/violation`, { type: 'copy_paste' });
       } catch (err) { console.error(err); }
-    };
-    document.addEventListener('copy', handleCopyPaste);
-    document.addEventListener('paste', handleCopyPaste);
 
+      if (count >= 3) {
+        handleAutoSubmit("Maximum copy/paste attempts exceeded.");
+      } else {
+        alert(`Warning: Copy/Paste is disabled. Attempt ${count}/3. Your test will submit automatically after 3 attempts.`);
+      }
+    };
+    
     // Anti-cheat: tab switching
     const handleVisibilityChange = async () => {
       if (document.hidden) {
-        alert("Warning: Switching tabs during a test is not allowed and has been recorded.");
+        violationCountsRef.current.tabSwitches += 1;
+        const count = violationCountsRef.current.tabSwitches;
+
         try {
           await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
         } catch (err) { console.error(err); }
+
+        if (count >= 3) {
+          handleAutoSubmit("Maximum tab switches exceeded.");
+        } else {
+          alert(`Warning: Switching tabs is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 attempts.`);
+        }
       }
     };
+
+    document.addEventListener('copy', handleCopyPaste);
+    document.addEventListener('paste', handleCopyPaste);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
@@ -69,7 +88,14 @@ const TakeTest = () => {
 
       setQuestions(qData);
       setSubmission(currentSub);
+      submissionRef.current = currentSub;
       setTest(currentSub.testId);
+      
+      // Initialize violation counts from DB in case of page refresh
+      violationCountsRef.current = {
+        tabSwitches: currentSub.tabSwitches || 0,
+        copyPaste: currentSub.copyPasteAttempts || 0
+      };
 
       // Load initial answers
       const loadedAnswers = {};
@@ -91,7 +117,7 @@ const TakeTest = () => {
         
         if (remaining <= 0) {
           clearInterval(timerRef.current);
-          handleAutoSubmit();
+          handleAutoSubmit("Time is up!");
         }
       };
       
@@ -104,14 +130,15 @@ const TakeTest = () => {
     }
   };
 
-  const handleAutoSubmit = async () => {
-    if (!submission || isSubmittingRef.current) return;
+  const handleAutoSubmit = async (reason = "Time is up!") => {
+    const activeSub = submissionRef.current;
+    if (!activeSub || isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      await api.post(`/submissions/${submission._id}/submit`, { isAutoSubmit: true });
-      alert("Time is up! Test submitted automatically.");
-      navigate(`/candidate/results/${submission._id}`);
+      await api.post(`/submissions/${activeSub._id}/submit`, { isAutoSubmit: true });
+      alert(`${reason} Test submitted automatically.`);
+      navigate(`/candidate/results/${activeSub._id}`);
     } catch (err) {
       console.error(err);
       isSubmittingRef.current = false;
