@@ -14,15 +14,21 @@ const startSubmission = async (req, res) => {
       // Fetch test to see if random questions are enabled
       const test = await Test.findById(testId);
       if (!test) return res.status(404).json({ message: 'Test not found' });
+      if (test.isActive === false) return res.status(403).json({ message: 'This test is currently inactive' });
 
-      // If randomQuestionsCount > 0, pick random questions
+      // Ensure assigned questions are shuffled and restricted by randomQuestionsCount
       let assignedQuestions = [];
+      let questions = await Question.find({ testId });
+      
+      if (test.randomizeQuestions) {
+        questions = questions.sort(() => 0.5 - Math.random());
+      }
+      
       if (test.randomQuestionsCount > 0) {
-        const questions = await Question.find({ testId });
-        // Shuffle questions
-        const shuffled = questions.sort(() => 0.5 - Math.random());
-        assignedQuestions = shuffled.slice(0, test.randomQuestionsCount).map(q => q._id);
-      } // Else, we leave it empty and assume all questions belong to the test
+        questions = questions.slice(0, test.randomQuestionsCount);
+      }
+      
+      assignedQuestions = questions.map(q => q._id);
 
       submission = await Submission.create({
         testId,

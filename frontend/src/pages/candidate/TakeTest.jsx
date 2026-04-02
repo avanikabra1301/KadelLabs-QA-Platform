@@ -13,6 +13,25 @@ const TakeTest = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [answers, setAnswers] = useState({}); // { questionId: [selectedOptions] }
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [markedForReview, setMarkedForReview] = useState(new Set());
+
+  const toggleMarkForReview = () => {
+    const currentQId = questions[currentQuestionIndex]._id;
+    const newSet = new Set(markedForReview);
+    if (newSet.has(currentQId)) {
+      newSet.delete(currentQId);
+    } else {
+      newSet.add(currentQId);
+    }
+    setMarkedForReview(newSet);
+  };
+
+  const getQuestionStatusColor = (index, qId) => {
+    if (index === currentQuestionIndex && !markedForReview.has(qId)) return 'var(--primary)';
+    if (markedForReview.has(qId)) return 'var(--warning)';
+    if (answers[qId] && answers[qId].length > 0) return 'var(--success)';
+    return 'var(--surface-color)';
+  };
 
   const timerRef = useRef(null);
   const isSubmittingRef = useRef(false);
@@ -203,7 +222,7 @@ const TakeTest = () => {
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2>{test.title}</h2>
         <div style={{ 
@@ -234,8 +253,9 @@ const TakeTest = () => {
         <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
       </div>
 
-      <div className="card" style={{ minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '2rem', flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="card" style={{ flex: '1 1 600px', minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Question {currentQuestionIndex + 1} of {questions.length}</span>
           <h3 style={{ marginTop: '0.5rem' }}>{currentQ.text}</h3>
           
@@ -297,7 +317,7 @@ const TakeTest = () => {
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '1rem' }}>
           <button 
             className="btn btn-secondary" 
             disabled={currentQuestionIndex === 0 || isSubmitting}
@@ -305,6 +325,19 @@ const TakeTest = () => {
             style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
           >
             ← Previous
+          </button>
+          
+          <button 
+            className="btn btn-secondary" 
+            onClick={toggleMarkForReview}
+            style={{ 
+              padding: '0.75rem 1.5rem', 
+              fontWeight: 'bold', 
+              backgroundColor: markedForReview.has(currentQ._id) ? 'var(--warning)' : 'var(--surface-color-light)', 
+              color: markedForReview.has(currentQ._id) ? 'white' : 'var(--text-color)' 
+            }}
+          >
+            {markedForReview.has(currentQ._id) ? 'Unmark Review' : 'Mark for Review'}
           </button>
           
           {currentQuestionIndex === questions.length - 1 ? (
@@ -326,6 +359,57 @@ const TakeTest = () => {
               Next →
             </button>
           )}
+        </div>
+        </div>
+
+        {/* Sidebar Navigation */}
+        <div className="card" style={{ flex: '0 0 300px', padding: '1.5rem' }}>
+          <h3 style={{ marginBottom: '1.5rem' }}>Question Navigation</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
+            {questions.map((q, idx) => {
+              const statusColor = getQuestionStatusColor(idx, q._id);
+              const isCurrent = idx === currentQuestionIndex;
+              return (
+                <button
+                  key={q._id}
+                  onClick={() => setCurrentQuestionIndex(idx)}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1/1',
+                    borderRadius: '50%',
+                    border: `2px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}`,
+                    backgroundColor: statusColor,
+                    color: (statusColor === 'var(--surface-color)' && !isCurrent) ? 'var(--text-color)' : 'white',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    transition: 'all 0.2s',
+                    boxShadow: isCurrent ? '0 0 0 2px rgba(79,70,229,0.3)' : 'none'
+                  }}
+                >
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
+          
+          <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--success)' }}></div> Answered
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--warning)' }}></div> Marked for Review
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid var(--primary)', backgroundColor: 'transparent' }}></div> Current
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)' }}></div> Not Answered
+            </div>
+          </div>
         </div>
       </div>
     </div>

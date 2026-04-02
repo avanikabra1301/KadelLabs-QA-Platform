@@ -7,12 +7,14 @@ const CreateTest = () => {
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(60);
   const [randomQuestionsCount, setRandomQuestionsCount] = useState(0);
+  const [randomizeQuestions, setRandomizeQuestions] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await api.post('/tests', { title, description, duration, randomQuestionsCount });
+      const { data } = await api.post('/tests', { title, description, duration, randomQuestionsCount, randomizeQuestions, isActive });
       navigate(`/admin/test/${data._id}/questions`);
     } catch (err) {
       alert('Failed to create test: ' + (err.response?.data?.message || err.message));
@@ -40,6 +42,14 @@ const CreateTest = () => {
             <label>Random Questions Count (0 for all)</label>
             <input type="number" min="0" value={randomQuestionsCount} onChange={e => setRandomQuestionsCount(Number(e.target.value))} />
             <small style={{ display: 'block', color: 'var(--text-muted)' }}>If greater than 0, candidates will get a random subset of this size from the total question pool.</small>
+          </div>
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input type="checkbox" id="randomizeQuestions" checked={randomizeQuestions} onChange={e => setRandomizeQuestions(e.target.checked)} style={{ width: 'auto', accentColor: 'var(--primary)' }} />
+            <label htmlFor="randomizeQuestions" style={{ margin: 0 }}>Randomize Questions Order Per Candidate</label>
+          </div>
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} style={{ width: 'auto', accentColor: 'var(--primary)' }} />
+            <label htmlFor="isActive" style={{ margin: 0 }}>Test is Active</label>
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
             <button type="submit" className="btn">Create Test & Add Questions</button>

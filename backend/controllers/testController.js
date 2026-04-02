@@ -6,12 +6,14 @@ const Question = require('../models/Question');
 // @access  Private/Admin
 const createTest = async (req, res) => {
   try {
-    const { title, description, duration, randomQuestionsCount } = req.body;
+    const { title, description, duration, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
     const test = await Test.create({
       title,
       description,
       duration,
       randomQuestionsCount: randomQuestionsCount || 0,
+      randomizeQuestions: randomizeQuestions || false,
+      isActive: isActive !== undefined ? isActive : true,
       createdBy: req.user._id
     });
     res.status(201).json(test);
@@ -28,6 +30,7 @@ const getTests = async (req, res) => {
     let query = {};
     if (req.user.role !== 'admin') {
       query.status = 'published';
+      query.isActive = true;
     }
     const tests = await Test.find(query).populate('createdBy', 'name');
     res.json(tests);
@@ -54,7 +57,7 @@ const getTestById = async (req, res) => {
 // @access  Private/Admin
 const updateTest = async (req, res) => {
   try {
-    const { title, description, duration, status, randomQuestionsCount } = req.body;
+    const { title, description, duration, status, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
     const test = await Test.findById(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     
@@ -64,6 +67,12 @@ const updateTest = async (req, res) => {
     test.status = status || test.status;
     if (randomQuestionsCount !== undefined) {
       test.randomQuestionsCount = randomQuestionsCount;
+    }
+    if (randomizeQuestions !== undefined) {
+      test.randomizeQuestions = randomizeQuestions;
+    }
+    if (isActive !== undefined) {
+      test.isActive = isActive;
     }
     
     const updatedTest = await test.save();

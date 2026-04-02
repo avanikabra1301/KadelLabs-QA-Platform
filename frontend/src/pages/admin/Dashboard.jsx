@@ -22,6 +22,15 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
+  const toggleActive = async (id, currentIsActive) => {
+    try {
+      await api.put(`/tests/${id}`, { isActive: !currentIsActive });
+      setTests(tests.map(t => t._id === id ? { ...t, isActive: !currentIsActive } : t));
+    } catch (err) {
+      alert('Failed to update test active status: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -57,6 +66,7 @@ const AdminDashboard = () => {
             <tr style={{ backgroundColor: 'var(--surface-color-light)', textAlign: 'left' }}>
               <th style={{ padding: '1rem' }}>Title</th>
               <th style={{ padding: '1rem' }}>Status</th>
+              <th style={{ padding: '1rem' }}>Active</th>
               <th style={{ padding: '1rem' }}>Duration</th>
               <th style={{ padding: '1rem' }}>Actions</th>
             </tr>
@@ -76,11 +86,36 @@ const AdminDashboard = () => {
                     {test.status}
                   </span>
                 </td>
+                <td style={{ padding: '1rem' }}>
+                  <span style={{ 
+                    padding: '0.25rem 0.5rem', 
+                    borderRadius: '1rem', 
+                    fontSize: '0.875rem',
+                    backgroundColor: test.isActive !== false ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    color: test.isActive !== false ? 'var(--success)' : 'var(--danger)'
+                  }}>
+                    {test.isActive !== false ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
                 <td style={{ padding: '1rem' }}>{test.duration} mins</td>
                 <td style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <Link to={`/admin/test/${test._id}/questions`} className="btn" style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem' }}>Questions</Link>
                     <Link to={`/admin/test/${test._id}/submissions`} className="btn btn-secondary" style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem' }}>Submissions</Link>
+                    <button 
+                      onClick={() => toggleActive(test._id, test.isActive !== false)}
+                      style={{ 
+                        fontSize: '0.875rem', 
+                        padding: '0.25rem 0.75rem', 
+                        cursor: 'pointer', 
+                        backgroundColor: test.isActive !== false ? '#dc2626' : '#10b981', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '0.375rem' 
+                      }}
+                    >
+                      {test.isActive !== false ? 'Deactivate' : 'Activate'}
+                    </button>
                   </div>
                 </td>
               </tr>

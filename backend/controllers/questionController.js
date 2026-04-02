@@ -36,9 +36,18 @@ const getQuestionsByTest = async (req, res) => {
       }
     }
 
-    const questions = await Question.find(query);
-    // If not admin, hide correctAnswers
+    let questions = await Question.find(query);
+    
+    // If Candidate, restore exact assigned randomization sequence
     if (req.user.role !== 'admin') {
+      const Submission = require('../models/Submission');
+      const submission = await Submission.findOne({ testId: req.params.testId, candidateId: req.user._id });
+      if (submission && submission.assignedQuestions && submission.assignedQuestions.length > 0) {
+        const orderMap = new Map();
+        submission.assignedQuestions.forEach((id, index) => orderMap.set(id.toString(), index));
+        questions.sort((a, b) => orderMap.get(a._id.toString()) - orderMap.get(b._id.toString()));
+      }
+      
       const sanitizedQuestions = questions.map(q => {
         const { correctAnswers, ...rest } = q.toObject();
         return rest;
