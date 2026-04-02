@@ -14,6 +14,8 @@ const TakeTest = () => {
   const [answers, setAnswers] = useState({}); // { questionId: [selectedOptions] }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [markedForReview, setMarkedForReview] = useState(new Set());
+  const [hasStarted, setHasStarted] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
   const toggleMarkForReview = () => {
     const currentQId = questions[currentQuestionIndex]._id;
@@ -41,6 +43,41 @@ const TakeTest = () => {
   useEffect(() => {
     fetchTestDetails();
   }, [id]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (hasStarted && !document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
+        alert("You have exited fullscreen! This activity has been recorded as a suspicious action.");
+        if (violationCountsRef.current) {
+          violationCountsRef.current.tabSwitches += 1;
+          if (submission) {
+            api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' }).catch(console.error);
+          }
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, [hasStarted, submission]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!hasStarted || showReview || isSubmitting) return;
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      
+      if (e.key === 'ArrowRight' && currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else if (e.key === 'ArrowLeft' && currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(prev => prev - 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasStarted, showReview, isSubmitting, currentQuestionIndex, questions.length]);
 
   useEffect(() => {
     if (!submission) return;
@@ -156,6 +193,9 @@ const TakeTest = () => {
     setIsSubmitting(true);
     try {
       await api.post(`/submissions/${activeSub._id}/submit`, { isAutoSubmit: true });
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.log(err));
+      }
       alert(`${reason} Test submitted automatically.`);
       navigate(`/candidate/results/${activeSub._id}`);
     } catch (err) {
@@ -165,19 +205,25 @@ const TakeTest = () => {
     }
   };
 
-  const submitTestManual = async () => {
+  const triggerReview = () => {
+    setShowReview(true);
+  };
+
+  const confirmSubmit = async () => {
     if (isSubmittingRef.current) return;
-    if (window.confirm("Are you sure you want to submit your test?")) {
-      isSubmittingRef.current = true;
-      setIsSubmitting(true);
-      try {
-        await api.post(`/submissions/${submission._id}/submit`, { isAutoSubmit: false });
-        navigate(`/candidate/results/${submission._id}`);
-      } catch (err) {
-        alert('Failed to submit: ' + (err.response?.data?.message || err.message));
-        isSubmittingRef.current = false;
-        setIsSubmitting(false);
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      await api.post(`/submissions/${submission._id}/submit`, { isAutoSubmit: false });
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.log(err));
       }
+      navigate(`/candidate/results/${submission._id}`);
+    } catch (err) {
+      alert('Failed to submit: ' + (err.response?.data?.message || err.message));
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      setShowReview(false);
     }
   };
 
@@ -209,6 +255,22 @@ const TakeTest = () => {
     }
   };
 
+  const enterFullscreen = async () => {
+    const elem = document.documentElement;
+    try {
+      if (elem.requestFullscreen) {
+        await elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) { /* Safari */
+        await elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { /* IE11 */
+        await elem.msRequestFullscreen();
+      }
+    } catch (err) {
+      alert("Please allow fullscreen to take the test.");
+    }
+    setHasStarted(true);
+  };
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -217,24 +279,73 @@ const TakeTest = () => {
 
   if (questions.length === 0 || !test) return <div style={{ textAlign: 'center', marginTop: '4rem' }}>Loading Test...</div>;
 
+  if (!hasStarted) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '4rem auto', textAlign: 'center' }}>
+        <div className="card">
+          <h2 style={{ marginBottom: '1.5rem', fontSize: '2rem' }}>Welcome to {test.title}</h2>
+          <div style={{ padding: '1.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', borderRadius: '0.75rem', marginBottom: '2rem', textAlign: 'left' }}>
+             <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>🚨 Strict Exam Environment</h3>
+             <ul style={{ color: 'var(--text-main)', lineHeight: '1.6', margin: '0' }}>
+               <li>This test will execute in <strong>Fullscreen Mode</strong>.</li>
+               <li>Do not exit fullscreen, switch tabs, or minimize the window.</li>
+               <li>Suspicious activity will be logged and may lead to automatic disqualification.</li>
+             </ul>
+          </div>
+          <button className="btn" onClick={enterFullscreen} style={{ fontSize: '1.1rem', padding: '1rem 2rem' }}>Start Exam Securely in Fullscreen</button>
+        </div>
+      </div>
+    );
+  }
+
   // The actual number of questions the candidate sees is questions.length (since we slice in backend).
   const currentQ = questions[currentQuestionIndex];
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].length > 0).length;
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      {showReview && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.95)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: '600px', width: '100%', textAlign: 'center' }}>
+            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.75rem' }}>Review Before Submission</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+              <div style={{ padding: '1.5rem 1rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.75rem', color: 'var(--success)', border: '1px solid var(--success)' }}>
+                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{answeredCount}</h3>
+                 <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Answered</div>
+              </div>
+              <div style={{ padding: '1.5rem 1rem', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '0.75rem', color: 'var(--warning)', border: '1px solid var(--warning)' }}>
+                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{markedForReview.size}</h3>
+                 <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Marked for Review</div>
+              </div>
+              <div style={{ padding: '1.5rem 1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{questions.length - answeredCount}</h3>
+                 <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Unanswered</div>
+              </div>
+            </div>
+            <p style={{ marginBottom: '2rem', color: 'var(--text-muted)', fontSize: '1.1rem' }}>Are you absolutely sure you want to finish the test? You cannot change your answers after submission.</p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button className="btn btn-secondary" onClick={() => setShowReview(false)} disabled={isSubmitting} style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}>Return to Test</button>
+              <button className="btn" onClick={confirmSubmit} disabled={isSubmitting} style={{ backgroundColor: 'var(--success)', padding: '1rem 2rem', fontSize: '1.1rem' }}>
+                {isSubmitting ? 'Submitting...' : 'Confirm Submission'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2>{test.title}</h2>
         <div style={{ 
           fontSize: '1.25rem', 
           fontWeight: 'bold', 
-          color: timeLeft < 60 ? 'var(--danger)' : 'var(--primary)',
-          backgroundColor: timeLeft < 60 ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
+          color: timeLeft <= 60 ? 'var(--danger)' : (timeLeft <= 300 ? 'var(--warning)' : 'var(--primary)'),
+          backgroundColor: timeLeft <= 60 ? 'rgba(239, 68, 68, 0.1)' : (timeLeft <= 300 ? 'rgba(234, 179, 8, 0.1)' : 'var(--surface-color)'),
           padding: '0.5rem 1rem',
           borderRadius: '0.5rem',
-          border: `1px solid ${timeLeft < 60 ? 'var(--danger)' : 'var(--border-color)'}`,
+          border: `1px solid ${timeLeft <= 60 ? 'var(--danger)' : (timeLeft <= 300 ? 'var(--warning)' : 'var(--border-color)')}`,
           transition: 'all 0.3s ease',
-          animation: timeLeft < 60 && timeLeft > 0 ? 'pulse 1s infinite' : 'none'
+          animation: timeLeft <= 300 && timeLeft > 0 ? 'pulse 1s infinite' : 'none'
         }}>
           ⏱ {formatTime(timeLeft)}
         </div>
@@ -344,10 +455,10 @@ const TakeTest = () => {
              <button 
                 className="btn" 
                 style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
-                onClick={submitTestManual}
+                onClick={triggerReview}
                 disabled={isSubmitting}
               >
-               {isSubmitting ? 'Submitting...' : 'Submit Final Test'}
+               Review & Submit
              </button>
           ) : (
             <button 
