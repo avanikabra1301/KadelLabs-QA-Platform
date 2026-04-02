@@ -53,7 +53,6 @@ const ViewSubmissions = () => {
     return true;
   });
 
-  // Sort if a score filter is applied (highest first)
   if (scoreFilter !== 'all') {
     filteredSubmissions.sort((a, b) => {
       const pA = a.maxScore > 0 ? (a.score / a.maxScore) : 0;
@@ -62,11 +61,39 @@ const ViewSubmissions = () => {
     });
   }
 
+  const handleRecalculate = async () => {
+    if (!window.confirm("Are you sure you want to recalculate all scores? This cannot be undone.")) return;
+    try {
+      await api.post(`/submissions/test/${id}/recalculate`);
+      alert("Recalculation successful.");
+      window.location.reload();
+    } catch (err) {
+       alert("Error recalculating: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get(`/submissions/test/${id}/export`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Test_${id}_report.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert("Error exporting: " + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h2>Submissions for {test.title}</h2>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button onClick={handleRecalculate} className="btn" style={{ backgroundColor: 'var(--warning)', color: 'white', border: 'none', padding: '0.5rem 1rem' }}>Recalculate Results</button>
+          <button onClick={handleExport} className="btn" style={{ backgroundColor: 'var(--success)', color: 'white', border: 'none', padding: '0.5rem 1rem' }}>Export Details</button>
           <input 
             type="text" 
             placeholder="Search Name, Degree or College..." 

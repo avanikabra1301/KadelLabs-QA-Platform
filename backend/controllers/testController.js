@@ -61,6 +61,17 @@ const updateTest = async (req, res) => {
     const test = await Test.findById(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     
+    if (status === 'published' && test.status !== 'published') {
+      const questions = await Question.find({ testId: test._id });
+      if (questions.length === 0) {
+        return res.status(400).json({ message: 'Cannot publish test without any questions.' });
+      }
+      const invalidQuestions = questions.filter(q => !q.correctAnswers || q.correctAnswers.length === 0);
+      if (invalidQuestions.length > 0) {
+        return res.status(400).json({ message: 'Correct answers missing for one or more questions. Cannot publish test.' });
+      }
+    }
+
     test.title = title || test.title;
     test.description = description || test.description;
     test.duration = duration || test.duration;

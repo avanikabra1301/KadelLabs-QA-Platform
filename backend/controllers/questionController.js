@@ -11,6 +11,10 @@ const createQuestion = async (req, res) => {
     const test = await Test.findById(testId);
     if (!test) return res.status(404).json({ message: 'Test not found' });
 
+    if (!correctAnswers || correctAnswers.length === 0) {
+      return res.status(400).json({ message: 'Correct answers are mandatory and cannot be empty.' });
+    }
+
     const question = await Question.create({
       testId, text, type, options, correctAnswers, points
     });
@@ -88,10 +92,14 @@ const importQuestions = async (req, res) => {
       }
 
       // Handle multiple correct answers separated by commas
-      const rawCorrect = String(row['Correct Answers'] || '');
+      const rawCorrect = String(row['Correct Answers'] || '').trim();
       const correctAnswers = type === 'short_answer' 
-        ? [rawCorrect] 
+        ? (rawCorrect ? [rawCorrect] : []) 
         : rawCorrect.split(',').map(s => s.trim()).filter(s => s);
+
+      if (!correctAnswers || correctAnswers.length === 0) {
+        throw new Error(`Question "${row['Question Text'] || 'Untitled'}" is missing 'Correct Answers' column or value. Import failed.`);
+      }
 
       return {
         testId,

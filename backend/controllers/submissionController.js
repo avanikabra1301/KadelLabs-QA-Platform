@@ -183,4 +183,116 @@ const getTestSubmissions = async (req, res) => {
   }
 };
 
-module.exports = { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation };
+// @desc    Recalculate all submissions for a test
+// @route   POST /api/submissions/test/:testId/recalculate
+// @access  Private/Admin
+const recalculateTestSubmissions = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ message: 'Test not found' });
+
+    const questions = await Question.find({ testId });
+    if (!questions || questions.length === 0) {
+      return res.status(400).json({ message: 'No questions found for this test' });
+    }
+
+    const submissions = await Submission.find({ testId });
+    for (let submission of submissions) {
+      if (submission.status === 'in_progress') continue;
+      
+      let totalScore = 0;
+      let maxScore = 0;
+      
+      let applicableQuestions = questions;
+      if (submission.assignedQuestions && submission.assignedQuestions.length > 0) {
+        applicableQuestions = questions.filter(q => submission.assignedQuestions.includes(q._id));
+      }
+
+      submission.answers.forEach(ans => {
+        const question = applicableQuestions.find(q => q._id.toString() === ans.questionId.toString());
+        if (question) {
+          const isCorrect = JSON.stringify(ans.answers.sort()) === JSON.stringify(question.correctAnswers.sort());
+          ans.isCorrect = isCorrect;
+          ans.pointsAwarded = isCorrect ? (question.points || 1) : 0;
+          totalScore += ans.pointsAwarded;
+        }
+      });
+
+      applicableQuestions.forEach(q => {
+        maxScore += q.points || 1;
+      });
+
+      submission.score = totalScore;
+      submission.maxScore = maxScore;
+      await submission.save();
+    }
+
+    res.json({ message: `Successfully recalculated ${submissions.length} submissions.` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Export detailed report for a test
+// @route   GET /api/submissions/test/:testId/export
+// @access  Private/Admin
+const exportTestSubmissions = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ message: 'Test not found' });
+    
+    const questions = await Question.find({ testId });
+    const submissions = await Submission.find({ testId }).populate('candidateId', 'name email degree college');
+
+    const exportData = [];
+
+    // Detailed report array building
+    submissions.forEach(sub => {
+      if (sub.status === 'in_progress') return;
+
+      let applicableQuestions = questions;
+      if (sub.assignedQuestions && sub.assignedQuestions.length > 0) {
+        applicableQuestions = questions.filter(q => sub.assignedQuestions.includes(q._id));
+      }
+
+      applicableQuestions.forEach(q => {
+        const ans = sub.answers.find(a => a.questionId.toString() === q._id.toString());
+        const selectedOption = ans && ans.answers && ans.answers.length > 0 ? ans.answers.join(', ') : 'Not Answered';
+        const correctOpt = q.correctAnswers ? q.correctAnswers.join(', ') : 'N/A';
+        const isCorrect = ans ? ans.isCorrect : false;
+
+        exportData.push({
+          'Candidate Name': sub.candidateId?.name || 'Unknown',
+          'Candidate Email': sub.candidateId?.email || 'N/A',
+          'Question ID': q._id.toString(),
+          'Question Text': q.text,
+          'Selected Answer': selectedOption,
+          'Correct Answer': correctOpt,
+          'Result': isCorrect ? 'Correct' : 'Wrong',
+          'Candidate Total Score': `${sub.score} / ${sub.maxScore}`,
+          'Test Date': new Date(sub.startTime).toLocaleDateString()
+        });
+      });
+    });
+
+    if (exportData.length === 0) {
+      return res.status(400).json({ message: 'No completed submissions to export' });
+    }
+
+    const xlsx = require('xlsx');
+    const ws = xlsx.utils.json_to_sheet(exportData);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, "Data");
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Test_${test._id}_report.xlsx`);
+    res.send(buf);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation, recalculateTestSubmissions, exportTestSubmissions };

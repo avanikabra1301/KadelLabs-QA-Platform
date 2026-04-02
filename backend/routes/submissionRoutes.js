@@ -1,5 +1,5 @@
 const express = require('express');
-const { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation } = require('../controllers/submissionController');
+const { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation, recalculateTestSubmissions, exportTestSubmissions } = require('../controllers/submissionController');
 const { protect, admin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,5 +11,7 @@ router.post('/:id/submit', protect, submitTest);
 router.put('/:id/violation', protect, reportViolation);
 
 router.get('/test/:testId', protect, admin, getTestSubmissions);
+router.post('/test/:testId/recalculate', protect, admin, recalculateTestSubmissions);
+router.get('/test/:testId/export', protect, admin, exportTestSubmissions);
 
 module.exports = router;
