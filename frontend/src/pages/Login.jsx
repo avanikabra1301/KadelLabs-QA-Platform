@@ -84,6 +84,7 @@ const Login = () => {
               <option value="MERN">MERN</option>
               <option value="HR">HR</option>
               <option value="Agentic AI">Agentic AI</option>
+              <option value="DevOps">DevOps</option>
             </select>
           </div>
           <div style={{ gridColumn: 'span 2' }}>

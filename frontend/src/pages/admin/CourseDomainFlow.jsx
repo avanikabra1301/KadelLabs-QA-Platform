@@ -12,7 +12,7 @@ const CourseDomainFlow = () => {
 
   // Constants
   const COURSES = ['Prarambh', 'Navpath', 'Utkarsh'];
-  const DOMAINS = ['BA', 'QA', 'PHP', 'AIML', 'DE', 'MERN', 'HR', 'Agentic AI'];
+  const DOMAINS = ['BA', 'QA', 'PHP', 'AIML', 'DE', 'MERN', 'HR', 'Agentic AI', 'DevOps'];
 
   useEffect(() => {
     const fetchAllSubmissions = async () => {
