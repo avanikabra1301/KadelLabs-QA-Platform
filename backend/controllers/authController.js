@@ -33,38 +33,53 @@ const registerUser = async (req, res) => {
 };
 
 const candidateLogin = async (req, res) => {
-  const { name, degree, college } = req.body;
-  if (!name || !degree || !college) return res.status(400).json({ message: 'Name, degree, and college are required' });
+  const { name, email, degree, college, course, domain } = req.body;
+  if (!name || !email || !degree || !college || !course || !domain) {
+    return res.status(400).json({ message: 'Name, email, degree, college, course, and domain are required' });
+  }
+
+  // Name validation: alphabets and spaces only
+  const nameRegex = /^[A-Za-z\s]+$/;
+  if (!nameRegex.test(name) || !nameRegex.test(degree) || !nameRegex.test(college)) {
+    return res.status(400).json({ message: 'Name, Degree, and College must contain only alphabets and spaces' });
+  }
 
   try {
-    // Check if candidate exists by name (this is naive, but fits the requirement)
-    // If they already exist, we could just log them in, or verify degree/college. 
-    // We'll just update it or find it.
-    let user = await User.findOne({ name, role: 'candidate' });
+    // Check if candidate exists by actual email
+    let user = await User.findOne({ email, role: 'candidate' });
     
+    // Check if another candidate has this email (maybe an admin error, etc.), mostly unique constraint will handle it.
     if (!user) {
-      // Create a new candidate profile without email/password
+      // Create a new candidate profile
       user = await User.create({ 
         name, 
         role: 'candidate',
+        email,
         degree,
         college,
-        email: `${name.toLowerCase().replace(/\s+/g, '')}_${Date.now()}@candidate.temp`, // Dummy email to satisfy schema if needed
+        course,
+        domain,
         password: Math.random().toString(36).slice(-8) // Random password they don't need to know
       });
     } else {
-      // Update existing user with latest degree/college
+      // Update existing user with latest info
+      user.name = name;
       user.degree = degree;
       user.college = college;
+      user.course = course;
+      user.domain = domain;
       await user.save();
     }
 
     res.json({
       _id: user._id,
       name: user.name,
+      email: user.email,
       role: user.role,
       degree: user.degree,
       college: user.college,
+      course: user.course,
+      domain: user.domain,
       token: generateToken(user._id),
     });
   } catch (error) {

@@ -295,4 +295,18 @@ const exportTestSubmissions = async (req, res) => {
   }
 };
 
-module.exports = { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation, recalculateTestSubmissions, exportTestSubmissions };
+// @desc    Get all submissions across all tests (Admin)
+// @route   GET /api/submissions/all
+// @access  Private/Admin
+const getAllSubmissions = async (req, res) => {
+  try {
+    const submissions = await Submission.find({})
+      .populate('candidateId', 'name email degree college course domain')
+      .populate('testId', 'title');
+    res.json(submissions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { startSubmission, saveAnswer, submitTest, getMySubmissions, getTestSubmissions, reportViolation, recalculateTestSubmissions, exportTestSubmissions, getAllSubmissions };

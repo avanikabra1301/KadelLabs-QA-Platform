@@ -21,8 +21,8 @@ export const AuthProvider = ({ children }) => {
     setUser(data);
   };
 
-  const candidateLogin = async (name, degree, college) => {
-    const { data } = await api.post('/auth/candidate-login', { name, degree, college });
+  const candidateLogin = async (name, email, degree, college, course, domain) => {
+    const { data } = await api.post('/auth/candidate-login', { name, email, degree, college, course, domain });
     localStorage.setItem('userInfo', JSON.stringify(data));
     setUser(data);
   };

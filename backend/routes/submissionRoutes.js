@@ -13,5 +13,6 @@ router.put('/:id/violation', protect, reportViolation);
 router.get('/test/:testId', protect, admin, getTestSubmissions);
 router.post('/test/:testId/recalculate', protect, admin, recalculateTestSubmissions);
 router.get('/test/:testId/export', protect, admin, exportTestSubmissions);
+router.get('/all', protect, admin, require('../controllers/submissionController').getAllSubmissions);
 
 module.exports = router;

@@ -11,9 +11,18 @@
   --success: #10B981;
 }
 
+[data-theme='light'] {
+  --bg-color: #F8FAFC;
+  --surface-color: #FFFFFF;
+  --surface-color-light: #F1F5F9;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --border-color: #E2E8F0;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Times New Roman', Times, serif;
   background-color: var(--bg-color);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
@@ -44,6 +53,7 @@ body {
   font-weight: bold;
   background: linear-gradient(90deg, #818CF8, #C084FC);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

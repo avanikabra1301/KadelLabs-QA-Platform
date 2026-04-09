@@ -35,7 +35,10 @@ const AdminDashboard = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2>Admin Dashboard</h2>
-        <Link to="/admin/test/create" className="btn">Create New Test</Link>
+        <div>
+          <Link to="/admin/course-domain" className="btn btn-secondary" style={{ marginRight: '1rem' }}>Course / Domain View</Link>
+          <Link to="/admin/test/create" className="btn">Create New Test</Link>
+        </div>
       </div>
 
       {stats && (

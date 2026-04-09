@@ -30,7 +30,7 @@ const TakeTest = () => {
 
   const getQuestionStatusColor = (index, qId) => {
     if (index === currentQuestionIndex && !markedForReview.has(qId)) return 'var(--primary)';
-    if (markedForReview.has(qId)) return 'var(--warning)';
+    if (markedForReview.has(qId)) return '#EAB308'; // Bright yellow
     if (answers[qId] && answers[qId].length > 0) return 'var(--success)';
     return 'var(--surface-color)';
   };
@@ -117,14 +117,38 @@ const TakeTest = () => {
       }
     };
 
+    const handleBlur = async () => {
+      violationCountsRef.current.tabSwitches += 1;
+      const count = violationCountsRef.current.tabSwitches;
+      try {
+        await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
+      } catch (err) { console.error(err); }
+
+      if (count >= 3) {
+        handleAutoSubmit("Maximum focus loss exceeded.");
+      } else {
+        alert(`Warning: Leaving the test window (Focus loss) is not allowed. Attempt ${count}/3. Your test will submit automatically.`);
+      }
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth < window.screen.width * 0.9 || window.innerHeight < window.screen.height * 0.9) {
+        alert("Warning: Window resizing or split-screening is not allowed! Please maximize your window.");
+      }
+    };
+
     document.addEventListener('copy', handleCopyPaste);
     document.addEventListener('paste', handleCopyPaste);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('resize', handleResize);
 
     return () => {
       document.removeEventListener('copy', handleCopyPaste);
       document.removeEventListener('paste', handleCopyPaste);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('resize', handleResize);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [submission]);
@@ -444,32 +468,30 @@ const TakeTest = () => {
             style={{ 
               padding: '0.75rem 1.5rem', 
               fontWeight: 'bold', 
-              backgroundColor: markedForReview.has(currentQ._id) ? 'var(--warning)' : 'var(--surface-color-light)', 
-              color: markedForReview.has(currentQ._id) ? 'white' : 'var(--text-color)' 
+              backgroundColor: markedForReview.has(currentQ._id) ? '#EAB308' : 'var(--surface-color-light)', 
+              color: markedForReview.has(currentQ._id) ? '#000' : 'var(--text-color)' 
             }}
           >
-            {markedForReview.has(currentQ._id) ? 'Unmark Review' : 'Mark for Review'}
+            {markedForReview.has(currentQ._id) ? '🟡 Unmark Review' : 'Mark for Review'}
           </button>
           
-          {currentQuestionIndex === questions.length - 1 ? (
-             <button 
-                className="btn" 
-                style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
-                onClick={triggerReview}
-                disabled={isSubmitting}
-              >
-               Review & Submit
-             </button>
-          ) : (
-            <button 
-              className="btn" 
-              disabled={isSubmitting}
-              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-              style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
-            >
-              Next →
-            </button>
-          )}
+          <button 
+            className="btn btn-secondary" 
+            disabled={currentQuestionIndex === questions.length - 1 || isSubmitting}
+            onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+            style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
+          >
+            Next →
+          </button>
+
+          <button 
+            className="btn" 
+            style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
+            onClick={triggerReview}
+            disabled={isSubmitting}
+          >
+            Review & Submit
+          </button>
         </div>
         </div>
 

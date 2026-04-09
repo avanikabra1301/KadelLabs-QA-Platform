@@ -7,7 +7,9 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'candidate'], default: 'candidate' },
   degree: { type: String },
-  college: { type: String }
+  college: { type: String },
+  course: { type: String },
+  domain: { type: String }
 }, { timestamps: true });
 
 userSchema.pre('save', async function() {
