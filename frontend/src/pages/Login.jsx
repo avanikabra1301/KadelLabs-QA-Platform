@@ -17,7 +17,7 @@ const Login = () => {
     e.preventDefault();
     const nameRegex = /^[A-Za-z\s]+$/;
     if (!nameRegex.test(name) || !nameRegex.test(degree) || !nameRegex.test(college)) {
-      setError('Name, Degree, and College must contain only alphabets and spaces');
+      setError('Name, Degree, and Organization/College Name must contain only alphabets and spaces');
       return;
     }
     if (!course || !domain) {
@@ -37,17 +37,12 @@ const Login = () => {
     <div style={{ maxWidth: '500px', margin: '4rem auto' }}>
       <div className="card">
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          {/* SVG Placeholder Logo */}
-          <svg width="60" height="60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '0.5rem' }}>
-            <rect width="100" height="100" rx="20" fill="url(#paint0_linear)"/>
-            <path d="M50 25L75 45V75H25V45L50 25Z" fill="white"/>
-            <defs>
-              <linearGradient id="paint0_linear" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#818CF8"/>
-                <stop offset="1" stopColor="#C084FC"/>
-              </linearGradient>
-            </defs>
-          </svg>
+          {/* KadelLabs Logo */}
+          <img 
+            src="https://images.crunchbase.com/image/upload/c_pad,h_256,w_256,f_auto,q_auto:eco,dpr_1/qnxq7anrihqczhrlwoyk" 
+            alt="KadelLabs Logo" 
+            style={{ width: '80px', height: '80px', marginBottom: '0.5rem', borderRadius: '12px', objectFit: 'contain' }} 
+          />
           <h2>KadelLabs L&D Portal</h2>
         </div>
         {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '0.5rem' }}>{error}</div>}
@@ -65,13 +60,13 @@ const Login = () => {
             <input type="text" value={degree} onChange={(e) => setDegree(e.target.value)} required placeholder="B.Tech CS" />
           </div>
           <div>
-            <label>College Name</label>
-            <input type="text" value={college} onChange={(e) => setCollege(e.target.value)} required placeholder="Enter college" />
+            <label>Organization / College Name</label>
+            <input type="text" value={college} onChange={(e) => setCollege(e.target.value)} required placeholder="Enter Organization / College Name" />
           </div>
           <div>
-            <label>Course</label>
+            <label>Program</label>
             <select value={course} onChange={(e) => setCourse(e.target.value)} required>
-              <option value="">Select Course</option>
+              <option value="">Select Program</option>
               <option value="Prarambh">Prarambh</option>
               <option value="Navpath">Navpath</option>
               <option value="Utkarsh">Utkarsh</option>
@@ -86,6 +81,9 @@ const Login = () => {
               <option value="PHP">PHP</option>
               <option value="AIML">AIML</option>
               <option value="DE">DE</option>
+              <option value="MERN">MERN</option>
+              <option value="HR">HR</option>
+              <option value="Agentic AI">Agentic AI</option>
             </select>
           </div>
           <div style={{ gridColumn: 'span 2' }}>

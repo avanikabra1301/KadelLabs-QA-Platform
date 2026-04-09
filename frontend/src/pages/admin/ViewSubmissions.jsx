@@ -96,7 +96,7 @@ const ViewSubmissions = () => {
           <button onClick={handleExport} className="btn" style={{ backgroundColor: 'var(--success)', color: 'white', border: 'none', padding: '0.5rem 1rem' }}>Export Details</button>
           <input 
             type="text" 
-            placeholder="Search Name, Degree or College..." 
+            placeholder="Search Name, Degree or Organization/College..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ margin: 0, minWidth: '220px' }}
@@ -122,7 +122,7 @@ const ViewSubmissions = () => {
           <thead>
             <tr style={{ backgroundColor: 'var(--surface-color-light)', textAlign: 'left' }}>
               <th style={{ padding: '1rem' }}>Candidate Name</th>
-              <th style={{ padding: '1rem' }}>Degree / College</th>
+              <th style={{ padding: '1rem' }}>Degree / Organization/College</th>
               <th style={{ padding: '1rem' }}>Status</th>
               <th style={{ padding: '1rem' }}>Score</th>
               <th style={{ padding: '1rem' }}>Date Taken</th>

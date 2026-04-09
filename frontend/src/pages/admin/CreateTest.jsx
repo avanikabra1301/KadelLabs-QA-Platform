@@ -41,9 +41,9 @@ const CreateTest = () => {
             <input type="number" min="1" value={duration} onChange={e => setDuration(Number(e.target.value))} required />
           </div>
           <div>
-            <label>Course Requirement</label>
+            <label>Program Requirement</label>
             <select value={course} onChange={(e) => setCourse(e.target.value)} required>
-              <option value="">Select Course</option>
+              <option value="">Select Program</option>
               <option value="Prarambh">Prarambh</option>
               <option value="Navpath">Navpath</option>
               <option value="Utkarsh">Utkarsh</option>
@@ -58,6 +58,9 @@ const CreateTest = () => {
               <option value="PHP">PHP</option>
               <option value="AIML">AIML</option>
               <option value="DE">DE</option>
+              <option value="MERN">MERN</option>
+              <option value="HR">HR</option>
+              <option value="Agentic AI">Agentic AI</option>
             </select>
           </div>
           <div>
