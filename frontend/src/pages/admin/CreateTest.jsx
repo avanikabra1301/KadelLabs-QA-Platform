@@ -46,7 +46,6 @@ const CreateTest = () => {
               <option value="">Select Program</option>
               <option value="Prarambh">Prarambh</option>
               <option value="Navpath">Navpath</option>
-              <option value="Utkarsh">Utkarsh</option>
             </select>
           </div>
           <div>
