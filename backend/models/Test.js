@@ -4,6 +4,8 @@ const testSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   duration: { type: Number, required: true }, // in minutes
+  course: { type: String, required: true },
+  domain: { type: String, required: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
   randomizeQuestions: { type: Boolean, default: false },

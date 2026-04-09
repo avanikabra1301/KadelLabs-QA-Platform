@@ -6,11 +6,16 @@ const Question = require('../models/Question');
 // @access  Private/Admin
 const createTest = async (req, res) => {
   try {
-    const { title, description, duration, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
+    const { title, description, duration, course, domain, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
+    if (!course || !domain) {
+      return res.status(400).json({ message: 'Course and Domain configurations are strictly required for tests.' });
+    }
     const test = await Test.create({
       title,
       description,
       duration,
+      course,
+      domain,
       randomQuestionsCount: randomQuestionsCount || 0,
       randomizeQuestions: randomizeQuestions || false,
       isActive: isActive !== undefined ? isActive : true,
@@ -31,6 +36,8 @@ const getTests = async (req, res) => {
     if (req.user.role !== 'admin') {
       query.status = 'published';
       query.isActive = true;
+      if (req.user.course) query.course = req.user.course;
+      if (req.user.domain) query.domain = req.user.domain;
     }
     const tests = await Test.find(query).populate('createdBy', 'name');
     res.json(tests);
@@ -57,7 +64,7 @@ const getTestById = async (req, res) => {
 // @access  Private/Admin
 const updateTest = async (req, res) => {
   try {
-    const { title, description, duration, status, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
+    const { title, description, duration, status, course, domain, randomQuestionsCount, randomizeQuestions, isActive } = req.body;
     const test = await Test.findById(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     
@@ -76,6 +83,8 @@ const updateTest = async (req, res) => {
     test.description = description || test.description;
     test.duration = duration || test.duration;
     test.status = status || test.status;
+    if (course) test.course = course;
+    if (domain) test.domain = domain;
     if (randomQuestionsCount !== undefined) {
       test.randomQuestionsCount = randomQuestionsCount;
     }

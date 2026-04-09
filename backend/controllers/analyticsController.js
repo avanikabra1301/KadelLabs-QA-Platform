@@ -8,6 +8,7 @@ const User = require('../models/User');
 const getAnalytics = async (req, res) => {
   try {
     const totalTests = await Test.countDocuments();
+    const activeTests = await Test.countDocuments({ isActive: true });
     const totalCandidates = await User.countDocuments({ role: 'candidate' });
     const totalSubmissions = await Submission.countDocuments({ status: { $in: ['completed', 'auto_submitted'] } });
     
@@ -23,11 +24,20 @@ const getAnalytics = async (req, res) => {
     
     const averageScore = totalSubmissions > 0 ? (totalScorePercentage / totalSubmissions).toFixed(1) : 0;
 
+    const recentTests = await Test.find().sort({ createdAt: -1 }).limit(3).select('title course domain createdAt');
+    const recentSubmissions = await Submission.find({ status: { $in: ['completed', 'auto_submitted'] } })
+      .sort({ endTime: -1 }).limit(3)
+      .populate('candidateId', 'name')
+      .populate('testId', 'title');
+
     res.json({
       totalTests,
+      activeTests,
       totalCandidates,
       totalSubmissions,
-      averageScore
+      averageScore,
+      recentTests,
+      recentSubmissions
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

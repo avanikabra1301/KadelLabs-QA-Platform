@@ -6,6 +6,8 @@ const CreateTest = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(60);
+  const [course, setCourse] = useState('');
+  const [domain, setDomain] = useState('');
   const [randomQuestionsCount, setRandomQuestionsCount] = useState(0);
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -14,7 +16,7 @@ const CreateTest = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await api.post('/tests', { title, description, duration, randomQuestionsCount, randomizeQuestions, isActive });
+      const { data } = await api.post('/tests', { title, description, duration, course, domain, randomQuestionsCount, randomizeQuestions, isActive });
       navigate(`/admin/test/${data._id}/questions`);
     } catch (err) {
       alert('Failed to create test: ' + (err.response?.data?.message || err.message));
@@ -37,6 +39,26 @@ const CreateTest = () => {
           <div>
             <label>Duration (minutes)</label>
             <input type="number" min="1" value={duration} onChange={e => setDuration(Number(e.target.value))} required />
+          </div>
+          <div>
+            <label>Course Requirement</label>
+            <select value={course} onChange={(e) => setCourse(e.target.value)} required>
+              <option value="">Select Course</option>
+              <option value="Prarambh">Prarambh</option>
+              <option value="Navpath">Navpath</option>
+              <option value="Utkarsh">Utkarsh</option>
+            </select>
+          </div>
+          <div>
+            <label>Domain Requirement</label>
+            <select value={domain} onChange={(e) => setDomain(e.target.value)} required>
+              <option value="">Select Domain</option>
+              <option value="BA">BA</option>
+              <option value="QA">QA</option>
+              <option value="PHP">PHP</option>
+              <option value="AIML">AIML</option>
+              <option value="DE">DE</option>
+            </select>
           </div>
           <div>
             <label>Random Questions Count (0 for all)</label>
