@@ -11,7 +11,7 @@ const CourseDomainFlow = () => {
   const [loading, setLoading] = useState(true);
 
   // Constants
-  const COURSES = ['Prarambh', 'Navpath'];
+  const COURSES = ['Prarambh', 'Navpath', 'Utkarsh'];
   const DOMAINS = ['BA', 'QA', 'PHP', 'AIML', 'DE', 'MERN', 'HR', 'Agentic AI', 'DevOps'];
 
   useEffect(() => {
