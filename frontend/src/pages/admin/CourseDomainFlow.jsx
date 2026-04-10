@@ -41,7 +41,7 @@ const CourseDomainFlow = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-        <h2>Candidate Domain Filter Flow</h2>
+        <h2>Candidate Program Flow</h2>
         <Link to="/admin" className="btn btn-secondary">Back to Dashboard</Link>
       </div>
 
