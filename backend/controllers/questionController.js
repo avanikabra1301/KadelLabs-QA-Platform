@@ -30,11 +30,12 @@ const createQuestion = async (req, res) => {
 const getQuestionsByTest = async (req, res) => {
   try {
     let query = { testId: req.params.testId };
+    let submission = null;
     
     // If Candidate, try to find their submission to respect assigned random questions
     if (req.user.role !== 'admin') {
       const Submission = require('../models/Submission');
-      const submission = await Submission.findOne({ testId: req.params.testId, candidateId: req.user._id });
+      submission = await Submission.findOne({ testId: req.params.testId, candidateId: req.user._id });
       if (submission && submission.assignedQuestions && submission.assignedQuestions.length > 0) {
         query = { _id: { $in: submission.assignedQuestions } };
       }
@@ -44,8 +45,6 @@ const getQuestionsByTest = async (req, res) => {
     
     // If Candidate, restore exact assigned randomization sequence
     if (req.user.role !== 'admin') {
-      const Submission = require('../models/Submission');
-      const submission = await Submission.findOne({ testId: req.params.testId, candidateId: req.user._id });
       if (submission && submission.assignedQuestions && submission.assignedQuestions.length > 0) {
         const orderMap = new Map();
         submission.assignedQuestions.forEach((id, index) => orderMap.set(id.toString(), index));

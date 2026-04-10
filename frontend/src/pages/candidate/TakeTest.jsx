@@ -39,6 +39,7 @@ const TakeTest = () => {
   const isSubmittingRef = useRef(false);
   const submissionRef = useRef(null);
   const violationCountsRef = useRef({ tabSwitches: 0, copyPaste: 0 });
+  const lastViolationTimeRef = useRef(0);
 
   useEffect(() => {
     fetchTestDetails();
@@ -85,6 +86,7 @@ const TakeTest = () => {
     // Anti-cheat: disable copy-paste
     const handleCopyPaste = async (e) => {
       e.preventDefault();
+      if (!hasStarted) return;
       violationCountsRef.current.copyPaste += 1;
       const count = violationCountsRef.current.copyPaste;
       
@@ -102,6 +104,11 @@ const TakeTest = () => {
     // Anti-cheat: tab switching
     const handleVisibilityChange = async () => {
       if (document.hidden) {
+        if (!hasStarted) return;
+        const now = Date.now();
+        if (now - lastViolationTimeRef.current < 2000) return;
+        lastViolationTimeRef.current = now;
+
         violationCountsRef.current.tabSwitches += 1;
         const count = violationCountsRef.current.tabSwitches;
 
@@ -112,12 +119,17 @@ const TakeTest = () => {
         if (count >= 3) {
           handleAutoSubmit("Maximum tab switches exceeded.");
         } else {
-          alert(`Warning: Switching tabs is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 attempts.`);
+          alert(`Warning: Switching tabs is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 warnings.`);
         }
       }
     };
 
     const handleBlur = async () => {
+      if (!hasStarted) return;
+      const now = Date.now();
+      if (now - lastViolationTimeRef.current < 2000) return;
+      lastViolationTimeRef.current = now;
+
       violationCountsRef.current.tabSwitches += 1;
       const count = violationCountsRef.current.tabSwitches;
       try {
@@ -127,13 +139,28 @@ const TakeTest = () => {
       if (count >= 3) {
         handleAutoSubmit("Maximum focus loss exceeded.");
       } else {
-        alert(`Warning: Leaving the test window (Focus loss) is not allowed. Attempt ${count}/3. Your test will submit automatically.`);
+        alert(`Warning: Leaving the test window (Focus loss) is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 warnings.`);
       }
     };
 
-    const handleResize = () => {
+    const handleResize = async () => {
+      if (!hasStarted) return;
       if (window.innerWidth < window.screen.width * 0.9 || window.innerHeight < window.screen.height * 0.9) {
-        alert("Warning: Window resizing or split-screening is not allowed! Please maximize your window.");
+        const now = Date.now();
+        if (now - lastViolationTimeRef.current < 2000) return;
+        lastViolationTimeRef.current = now;
+
+        violationCountsRef.current.tabSwitches += 1;
+        const count = violationCountsRef.current.tabSwitches;
+        try {
+          await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
+        } catch (err) { console.error(err); }
+
+        if (count >= 3) {
+          handleAutoSubmit("Maximum split-screen warnings exceeded.");
+        } else {
+          alert(`Warning: Window resizing or split-screening is not allowed! Attempt ${count}/3. Please maximize your window.`);
+        }
       }
     };
 
@@ -151,7 +178,7 @@ const TakeTest = () => {
       window.removeEventListener('resize', handleResize);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [submission]);
+  }, [submission, hasStarted]);
 
   const fetchTestDetails = async () => {
     try {
@@ -235,6 +262,7 @@ const TakeTest = () => {
 
   const confirmSubmit = async () => {
     if (isSubmittingRef.current) return;
+    if (!window.confirm("Are you absolutely sure you want to finish the test? This cannot be undone.")) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
@@ -462,67 +490,67 @@ const TakeTest = () => {
             ← Previous
           </button>
           
-          <button 
-            className="btn btn-secondary" 
-            onClick={toggleMarkForReview}
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              fontWeight: 'bold', 
-              backgroundColor: markedForReview.has(currentQ._id) ? '#EAB308' : 'var(--surface-color-light)', 
-              color: markedForReview.has(currentQ._id) ? '#000' : 'var(--text-color)' 
-            }}
-          >
-            {markedForReview.has(currentQ._id) ? '🟡 Unmark Review' : 'Mark for Review'}
-          </button>
-          
-          <button 
-            className="btn btn-secondary" 
-            disabled={currentQuestionIndex === questions.length - 1 || isSubmitting}
-            onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-            style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
-          >
-            Next →
-          </button>
-
-          <button 
-            className="btn" 
-            style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
-            onClick={triggerReview}
-            disabled={isSubmitting}
-          >
-            Review & Submit
-          </button>
-        </div>
-        </div>
-
-        {/* Sidebar Navigation */}
-        <div className="card" style={{ flex: '0 0 300px', padding: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1.5rem' }}>Question Navigation</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
-            {questions.map((q, idx) => {
-              const statusColor = getQuestionStatusColor(idx, q._id);
-              const isCurrent = idx === currentQuestionIndex;
-              return (
-                <button
-                  key={q._id}
-                  onClick={() => setCurrentQuestionIndex(idx)}
-                  style={{
-                    width: '100%',
-                    aspectRatio: '1/1',
-                    borderRadius: '50%',
-                    border: `2px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}`,
-                    backgroundColor: statusColor,
-                    color: (statusColor === 'var(--surface-color)' && !isCurrent) ? 'var(--text-color)' : 'white',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                    transition: 'all 0.2s',
-                    boxShadow: isCurrent ? '0 0 0 2px rgba(79,70,229,0.3)' : 'none'
-                  }}
-                >
+            <button 
+              className="btn btn-secondary" 
+              onClick={toggleMarkForReview}
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                fontWeight: 'bold', 
+                backgroundColor: markedForReview.has(currentQ._id) ? '#EAB308' : 'var(--surface-color-light)', 
+                color: markedForReview.has(currentQ._id) ? '#000' : 'var(--text-main)' 
+              }}
+            >
+              {markedForReview.has(currentQ._id) ? '🟡 Unmark Review' : 'Mark for Review'}
+            </button>
+            
+            <button 
+              className="btn btn-secondary" 
+              disabled={currentQuestionIndex === questions.length - 1 || isSubmitting}
+              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+              style={{ padding: '0.75rem 1.5rem', fontWeight: 'bold' }}
+            >
+              Next →
+            </button>
+  
+            <button 
+              className="btn" 
+              style={{ backgroundColor: 'var(--success)', padding: '0.75rem 1.5rem', fontWeight: 'bold' }} 
+              onClick={triggerReview}
+              disabled={isSubmitting}
+            >
+              Submit Test
+            </button>
+          </div>
+          </div>
+  
+          {/* Sidebar Navigation */}
+          <div className="card" style={{ flex: '0 0 300px', padding: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1.5rem' }}>Question Navigation</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
+              {questions.map((q, idx) => {
+                const statusColor = getQuestionStatusColor(idx, q._id);
+                const isCurrent = idx === currentQuestionIndex;
+                return (
+                  <button
+                    key={q._id}
+                    onClick={() => setCurrentQuestionIndex(idx)}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1/1',
+                      borderRadius: '50%',
+                      border: `2px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}`,
+                      backgroundColor: statusColor,
+                      color: (statusColor === 'var(--surface-color)' && !isCurrent) ? 'var(--text-main)' : 'white',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                      transition: 'all 0.2s',
+                      boxShadow: isCurrent ? '0 0 0 2px rgba(79,70,229,0.3)' : 'none'
+                    }}
+                  >
                   {idx + 1}
                 </button>
               );

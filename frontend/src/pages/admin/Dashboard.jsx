@@ -149,7 +149,7 @@ const AdminDashboard = () => {
                 ➕ Deploy New Test
               </Link>
               <Link to="/admin/course-domain" className="btn btn-secondary" style={{ display: 'block', textAlign: 'center', padding: '0.8rem', fontSize: '0.9rem' }}>
-                📂 View Candidates by Domain
+                📂 View Candidates by L&D Programs
               </Link>
             </div>
           </div>

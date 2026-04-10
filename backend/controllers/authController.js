@@ -33,15 +33,21 @@ const registerUser = async (req, res) => {
 };
 
 const candidateLogin = async (req, res) => {
-  const { name, email, degree, college, course, domain } = req.body;
+  let { name, email, degree, college, course, domain } = req.body;
+  name = (name || '').trim();
+  email = (email || '').trim();
+  degree = (degree || '').trim();
+  college = (college || '').trim();
+  course = (course || '').trim();
+  domain = (domain || '').trim();
+
   if (!name || !email || !degree || !college || !course || !domain) {
-    return res.status(400).json({ message: 'Name, email, degree, college, course, and domain are required' });
+    return res.status(400).json({ message: 'Name, email, degree, college, course, and domain are required and cannot be empty' });
   }
 
-  // Name validation: alphabets and spaces only
-  const nameRegex = /^[A-Za-z\s]+$/;
-  if (!nameRegex.test(name) || !nameRegex.test(degree) || !nameRegex.test(college)) {
-    return res.status(400).json({ message: 'Name, Degree, and College must contain only alphabets and spaces' });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: 'Invalid email format' });
   }
 
   try {

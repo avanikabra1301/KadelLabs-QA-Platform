@@ -14,10 +14,10 @@
 [data-theme='light'] {
   --bg-color: #F8FAFC;
   --surface-color: #FFFFFF;
-  --surface-color-light: #F1F5F9;
+  --surface-color-light: #E2E8F0;
   --text-main: #0F172A;
   --text-muted: #64748B;
-  --border-color: #E2E8F0;
+  --border-color: #CBD5E1;
 }
 
 body {
@@ -111,6 +111,12 @@ a {
 
 .btn-secondary {
   background-color: var(--surface-color-light);
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--border-color);
 }
 
 input, select, textarea {

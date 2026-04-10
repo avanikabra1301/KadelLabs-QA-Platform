@@ -15,9 +15,21 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const nameRegex = /^[A-Za-z\s]+$/;
-    if (!nameRegex.test(name) || !nameRegex.test(degree) || !nameRegex.test(college)) {
-      setError('Name, Degree, and Organization/College Name must contain only alphabets and spaces');
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedDegree = degree.trim();
+    const trimmedCollege = college.trim();
+    const trimmedCourse = course.trim();
+    const trimmedDomain = domain.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedDegree || !trimmedCollege || !trimmedCourse || !trimmedDomain) {
+      setError('All fields are required and cannot be empty or only spaces');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Invalid email format. Must include @ and a valid domain.');
       return;
     }
     if (!course || !domain) {
@@ -26,7 +38,7 @@ const Login = () => {
     }
 
     try {
-      await candidateLogin(name, email, degree, college, course, domain);
+      await candidateLogin(trimmedName, trimmedEmail, trimmedDegree, trimmedCollege, trimmedCourse, trimmedDomain);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
