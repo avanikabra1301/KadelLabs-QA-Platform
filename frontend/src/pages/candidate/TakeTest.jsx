@@ -46,124 +46,72 @@ const TakeTest = () => {
   }, [id]);
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      if (hasStarted && !document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
-        alert("You have exited fullscreen! This activity has been recorded as a suspicious action.");
-        if (violationCountsRef.current) {
-          violationCountsRef.current.tabSwitches += 1;
-          if (submission) {
-            api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' }).catch(console.error);
-          }
-        }
-      }
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, [hasStarted, submission]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!hasStarted || showReview || isSubmitting) return;
-      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-      
-      if (e.key === 'ArrowRight' && currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-      } else if (e.key === 'ArrowLeft' && currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(prev => prev - 1);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasStarted, showReview, isSubmitting, currentQuestionIndex, questions.length]);
-
-  useEffect(() => {
     if (!submission) return;
 
-    // Anti-cheat: disable copy-paste
-    const handleCopyPaste = async (e) => {
-      e.preventDefault();
+    const handleViolation = async (type, reasonMsg) => {
       if (!hasStarted) return;
-      violationCountsRef.current.copyPaste += 1;
-      const count = violationCountsRef.current.copyPaste;
       
-      try {
-        await api.put(`/submissions/${submission._id}/violation`, { type: 'copy_paste' });
-      } catch (err) { console.error(err); }
-
-      if (count >= 3) {
-        handleAutoSubmit("Maximum copy/paste attempts exceeded.");
-      } else {
-        alert(`Warning: Copy/Paste is disabled. Attempt ${count}/3. Your test will submit automatically after 3 attempts.`);
-      }
-    };
-    
-    // Anti-cheat: tab switching
-    const handleVisibilityChange = async () => {
-      if (document.hidden) {
-        if (!hasStarted) return;
-        const now = Date.now();
-        if (now - lastViolationTimeRef.current < 2000) return;
-        lastViolationTimeRef.current = now;
-
-        violationCountsRef.current.tabSwitches += 1;
-        const count = violationCountsRef.current.tabSwitches;
-
-        try {
-          await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
-        } catch (err) { console.error(err); }
-
-        if (count >= 3) {
-          handleAutoSubmit("Maximum tab switches exceeded.");
-        } else {
-          alert(`Warning: Switching tabs is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 warnings.`);
-        }
-      }
-    };
-
-    const handleBlur = async () => {
-      if (!hasStarted) return;
       const now = Date.now();
-      if (now - lastViolationTimeRef.current < 2000) return;
+      // Generous 3s throttle protects against blur/resize/visibility cascading duplicates
+      if (now - lastViolationTimeRef.current < 3000) return;
       lastViolationTimeRef.current = now;
 
-      violationCountsRef.current.tabSwitches += 1;
-      const count = violationCountsRef.current.tabSwitches;
+      // Optimistically increment locally
+      if (type === 'tab_switch') {
+        violationCountsRef.current.tabSwitches += 1;
+      } else {
+        violationCountsRef.current.copyPaste += 1;
+      }
+
+      let currentCount = type === 'tab_switch' ? violationCountsRef.current.tabSwitches : violationCountsRef.current.copyPaste;
+
       try {
-        await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
+        const { data } = await api.put(`/submissions/${submission._id}/violation`, { type });
+        if (type === 'tab_switch' && data.tabSwitches !== undefined) {
+          violationCountsRef.current.tabSwitches = data.tabSwitches;
+          currentCount = data.tabSwitches;
+        } else if (type === 'copy_paste' && data.copyPasteAttempts !== undefined) {
+          violationCountsRef.current.copyPaste = data.copyPasteAttempts;
+          currentCount = data.copyPasteAttempts;
+        }
       } catch (err) { console.error(err); }
 
-      if (count >= 3) {
-        handleAutoSubmit("Maximum focus loss exceeded.");
+      if (currentCount >= 3) {
+        handleAutoSubmit(`Maximum warnings exceeded (${reasonMsg}).`);
       } else {
-        alert(`Warning: Leaving the test window (Focus loss) is not allowed. Attempt ${count}/3. Your test will submit automatically after 3 warnings.`);
+        alert(`Warning: ${reasonMsg} is not allowed. Attempt ${currentCount}/3. Your test will submit automatically after 3 warnings.`);
       }
     };
 
-    const handleResize = async () => {
-      if (!hasStarted) return;
+    const handleFullscreenChange = () => {
+      if (hasStarted && !document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
+        handleViolation('tab_switch', 'Exiting fullscreen');
+      }
+    };
+
+    const handleCopyPaste = (e) => {
+      e.preventDefault();
+      handleViolation('copy_paste', 'Copy/Paste');
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleViolation('tab_switch', 'Switching tabs');
+      }
+    };
+
+    const handleBlur = () => {
+      handleViolation('tab_switch', 'Leaving the test window (Focus loss)');
+    };
+
+    const handleResize = () => {
       if (window.innerWidth < window.screen.width * 0.9 || window.innerHeight < window.screen.height * 0.9) {
-        const now = Date.now();
-        if (now - lastViolationTimeRef.current < 2000) return;
-        lastViolationTimeRef.current = now;
-
-        violationCountsRef.current.tabSwitches += 1;
-        const count = violationCountsRef.current.tabSwitches;
-        try {
-          await api.put(`/submissions/${submission._id}/violation`, { type: 'tab_switch' });
-        } catch (err) { console.error(err); }
-
-        if (count >= 3) {
-          handleAutoSubmit("Maximum split-screen warnings exceeded.");
-        } else {
-          alert(`Warning: Window resizing or split-screening is not allowed! Attempt ${count}/3. Please maximize your window.`);
-        }
+        handleViolation('tab_switch', 'Window resizing or split-screening');
       }
     };
 
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('copy', handleCopyPaste);
     document.addEventListener('paste', handleCopyPaste);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -171,6 +119,8 @@ const TakeTest = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('copy', handleCopyPaste);
       document.removeEventListener('paste', handleCopyPaste);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -353,7 +303,10 @@ const TakeTest = () => {
   // The actual number of questions the candidate sees is questions.length (since we slice in backend).
   const currentQ = questions[currentQuestionIndex];
   const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
-  const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].length > 0).length;
+  
+  const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].length > 0 && !markedForReview.has(k)).length;
+  const markedCount = markedForReview.size;
+  const unansweredCount = questions.length - answeredCount - markedCount;
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -367,11 +320,11 @@ const TakeTest = () => {
                  <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Answered</div>
               </div>
               <div style={{ padding: '1.5rem 1rem', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderRadius: '0.75rem', color: 'var(--warning)', border: '1px solid var(--warning)' }}>
-                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{markedForReview.size}</h3>
+                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{markedCount}</h3>
                  <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Marked for Review</div>
               </div>
               <div style={{ padding: '1.5rem 1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.75rem', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
-                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{questions.length - answeredCount}</h3>
+                 <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{unansweredCount}</h3>
                  <div style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Unanswered</div>
               </div>
             </div>

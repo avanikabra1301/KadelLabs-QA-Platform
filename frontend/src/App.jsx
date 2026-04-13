@@ -44,7 +44,7 @@ function App() {
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.95)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
               <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Confirm Logout</h2>
-              <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Are you sure you want to logout of your account?</p>
+              <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Are you sure you want to logout?</p>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                 <button className="btn btn-secondary" onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1, padding: '0.75rem' }}>Cancel</button>
                 <button className="btn btn-danger" onClick={() => { setShowLogoutConfirm(false); logout(); }} style={{ flex: 1, padding: '0.75rem' }}>Logout</button>

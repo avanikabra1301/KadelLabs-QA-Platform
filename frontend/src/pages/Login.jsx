@@ -27,9 +27,9 @@ const Login = () => {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!emailRegex.test(trimmedEmail)) {
-      setError('Invalid email format. Must include @ and a valid domain.');
+      setError('Invalid email format. Must include @ and a valid domain (e.g. .com, .in).');
       return;
     }
     if (!course || !domain) {

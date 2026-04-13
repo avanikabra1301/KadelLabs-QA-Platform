@@ -151,7 +151,11 @@ const reportViolation = async (req, res) => {
     }
 
     await submission.save();
-    res.json({ message: 'Violation recorded' });
+    res.json({ 
+      message: 'Violation recorded',
+      tabSwitches: submission.tabSwitches,
+      copyPasteAttempts: submission.copyPasteAttempts
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

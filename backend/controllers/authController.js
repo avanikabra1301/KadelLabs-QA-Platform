@@ -45,9 +45,9 @@ const candidateLogin = async (req, res) => {
     return res.status(400).json({ message: 'Name, email, degree, college, course, and domain are required and cannot be empty' });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: 'Invalid email format' });
+    return res.status(400).json({ message: 'Invalid email format. Must include @ and a valid domain.' });
   }
 
   try {
